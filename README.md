@@ -49,7 +49,7 @@ student-ui/
 1. Clone the project
 ```bash
 git clone https://github.com/omar-riadd/Management-System-with-MongoDB.git
-cd student-ui
+cd Management-System-with-MongoDB
 ```
 2. Install dependencies
 ```bash
