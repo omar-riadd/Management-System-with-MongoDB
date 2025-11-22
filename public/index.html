@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Management System</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 8px; text-align: left; }
+    input, select { padding: 5px; margin: 5px; }
+    button { padding: 5px 10px; margin: 5px; }
+  </style>
+</head>
+<body>
+
+<h1>Management System</h1>
+
+<label for="collectionSelect">Select Collection:</label>
+<select id="collectionSelect">
+  <option value="students">Students</option>
+  <option value="instructors">Instructors</option>
+  <option value="courses">Courses</option>
+</select>
+
+<h2 id="collectionTitle">Students</h2>
+
+<table id="dataTable">
+  <thead>
+    <tr id="tableHeader"></tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
+
+<h3>Add / Edit Item</h3>
+<div id="formDiv">
+  <div id="dynamicForm"></div>
+  <button onclick="submitForm()">Submit</button>
+</div>
+
+<script>
+let currentCollection = "students";
+let editId = null;
+
+// Fetch and render data
+async function fetchData() {
+  const res = await fetch(`/${currentCollection}`);
+  const data = await res.json();
+  renderTable(data);
+}
+
+// Render table dynamically
+function renderTable(data) {
+  const tableHeader = document.getElementById("tableHeader");
+  const tableBody = document.getElementById("tableBody");
+
+  tableHeader.innerHTML = "";
+  tableBody.innerHTML = "";
+
+  if (!data.length) return;
+
+  // Header
+  Object.keys(data[0]).forEach(key => {
+    tableHeader.innerHTML += `<th>${key}</th>`;
+  });
+  tableHeader.innerHTML += `<th>Actions</th>`;
+
+  // Rows
+  data.forEach(item => {
+    let row = "<tr>";
+    Object.keys(item).forEach(key => {
+      row += `<td>${Array.isArray(item[key]) ? item[key].join(", ") : item[key]}</td>`;
+    });
+    row += `<td>
+      <button onclick="editItem(${item._id})">Edit</button>
+      <button onclick="deleteItem(${item._id})">Delete</button>
+    </td>`;
+    row += "</tr>";
+    tableBody.innerHTML += row;
+  });
+}
+
+// Render form dynamically
+function renderForm() {
+  const formDiv = document.getElementById("dynamicForm");
+  formDiv.innerHTML = "";
+
+  const fields = getFieldsForCollection(currentCollection);
+  fields.forEach(field => {
+    formDiv.innerHTML += `<label>${field}:</label><input type="text" id="field_${field}" /><br>`;
+  });
+}
+
+// Fields for each collection
+function getFieldsForCollection(collection) {
+  switch(collection) {
+    case "students": return ["_id","name","age","department","gpa","courses"];
+    case "instructors": return ["_id","name","age","courses","salary"];
+    case "courses": return ["_id","name","hours"];
+    default: return [];
+  }
+}
+
+// Submit form
+async function submitForm() {
+  const fields = getFieldsForCollection(currentCollection);
+  let obj = {};
+  fields.forEach(f => {
+    let val = document.getElementById(`field_${f}`).value;
+    if(f === "_id") val = val ? parseInt(val) : null; // integer or null for auto-gen
+    else if(f === "age" || f === "gpa" || f === "salary" || f === "hours") val = val ? parseFloat(val) : null;
+    else if(f === "courses") val = val.split(",").map(c => c.trim());
+    obj[f] = val;
+  });
+
+  // Auto-generate _id if empty
+  if (!obj._id) {
+    const res = await fetch(`/${currentCollection}`);
+    const data = await res.json();
+    const maxId = data.length ? Math.max(...data.map(d => d._id)) : 0;
+    obj._id = maxId + 1;
+  }
+
+  if (editId) {
+    await fetch(`/${currentCollection}/${editId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(obj)
+    });
+    editId = null;
+  } else {
+    await fetch(`/${currentCollection}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(obj)
+    });
+  }
+
+  renderForm();
+  fetchData();
+}
+
+// Edit item
+async function editItem(id) {
+  editId = id;
+  const res = await fetch(`/${currentCollection}`);
+  const data = await res.json();
+  const item = data.find(d => d._id === id);
+  if (!item) return;
+  const fields = getFieldsForCollection(currentCollection);
+  fields.forEach(f => {
+    document.getElementById(`field_${f}`).value = Array.isArray(item[f]) ? item[f].join(", ") : (item[f] ?? "");
+  });
+}
+
+// Delete item
+async function deleteItem(id) {
+  await fetch(`/${currentCollection}/${id}`, { method: "DELETE" });
+  fetchData();
+}
+
+// Handle collection change
+document.getElementById("collectionSelect").addEventListener("change", (e) => {
+  currentCollection = e.target.value;
+  document.getElementById("collectionTitle").innerText = currentCollection.charAt(0).toUpperCase() + currentCollection.slice(1);
+  renderForm();
+  fetchData();
+});
+
+// Initial render
+renderForm();
+fetchData();
+</script>
+
+</body>
+</html>
+
