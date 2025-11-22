@@ -48,7 +48,7 @@ student-ui/
 ## Setup Instructions
 1. Clone the project
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/omar-riadd/Management-System-with-MongoDB.git
 cd student-ui
 ```
 2. Install dependencies
