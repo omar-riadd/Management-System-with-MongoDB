@@ -1,11 +1,17 @@
+require("dotenv").config();
 const { MongoClient } = require("mongodb");
 
 // Local MongoDB
 const localUri = "mongodb://127.0.0.1:27017";
 const localClient = new MongoClient(localUri);
 
-// Atlas MongoDB
-const atlasUri = "mongodb+srv://omar:atlaspass@cluster0.rze0qt8.mongodb.net/universityDB?retryWrites=true&w=majority";
+// Atlas MongoDB (loaded securely from .env)
+const atlasUri = process.env.ATLAS_URI;
+if (!atlasUri) {
+  console.error("ERROR: ATLAS_URI is missing in .env file!");
+  process.exit(1);
+}
+
 const atlasClient = new MongoClient(atlasUri);
 
 let localDb, atlasDb;
@@ -53,7 +59,6 @@ async function sync() {
 // Start
 (async () => {
   await connectDbs();
-
   sync(); // First sync
 
   // Run sync every 10 seconds
